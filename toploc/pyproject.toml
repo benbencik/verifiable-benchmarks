@@ -1,0 +1,64 @@
+[build-system]
+requires = [
+    "setuptools>=61.0",
+    "wheel",
+    "build",
+    "torch",
+    "numpy",
+    "ninja",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "toploc"
+dynamic = ["version"]
+authors = [
+    {name = "Jack Min Ong", email = "ongjackm@gmail.com"},
+]
+description = "Lib for generating model inference and training proofs"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "setuptools",
+    "torch",
+    "numpy",
+]
+
+[project.urls]
+Documentation = "https://github.com/PrimeIntellect-ai/toploc"
+Repository = "https://github.com/PrimeIntellect-ai/toploc"
+Issues = "https://github.com/PrimeIntellect-ai/toploc/issues"
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+    "pre-commit",
+    "pytest",
+    "pytest-cov"
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "toploc.__version__"}
+
+[tool.cibuildwheel.linux]
+repair-wheel-command = """
+auditwheel repair \
+    --exclude libc10.so \
+    --exclude libcaffe2_nvrtc.so \
+    --exclude libshm.so \
+    --exclude libtorch_cpu.so \
+    --exclude libtorch_cuda_linalg.so \
+    --exclude libtorch_python.so \
+    --exclude libc10_cuda.so \
+    --exclude libgomp-a34b3233.so.1 \
+    --exclude libtorch.so \
+    --exclude libtorch_cuda.so \
+    --exclude libtorch_global_deps.so \
+    -w {dest_dir} {wheel}
+"""
