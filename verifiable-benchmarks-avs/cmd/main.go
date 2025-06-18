@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/Layr-Labs/hourglass-monorepo/ponos/pkg/performer/server"
 	performerV1 "github.com/Layr-Labs/protocol-apis/gen/protos/eigenlayer/hourglass/v1/performer"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"go.uber.org/zap"
 )
 
@@ -24,10 +26,10 @@ type BenchmarkTaskPayload struct {
 }
 
 // Struct for the result to be returned to the contract
-// proof can be any JSON-serializable object, here as map[string]interface{}
 type BenchmarkResult struct {
-	Proof    map[string]interface{} `json:"proof"`
-	Accuracy uint8                  `json:"accuracy"`
+	Proof    string `json:"proof"`
+	Accuracy uint8  `json:"accuracy"`
+	ModelUrl string `json:"modelUrl"`
 }
 
 func NewTaskWorker(logger *zap.Logger) *TaskWorker {
@@ -57,21 +59,26 @@ func (tw *TaskWorker) ValidateTask(t *performerV1.TaskRequest) error {
 }
 
 // Here is the benchmarking function
-func (tw *TaskWorker) toplocBenchmark(modelUrl, datasetUrl string) (uint8, map[string]interface{}, error) {
+func (tw *TaskWorker) toplocBenchmark(modelUrl, datasetUrl string) (uint8, string, error) {
     // Simulate some processing time
     time.Sleep(2 * time.Second)
 
     // Generate a random accuracy between 85 and 99
     accuracy := uint8(85 + rand.Intn(15))
 
-    // Create a mock proof
-    proof := map[string]interface{}{
-        "timestamp": time.Now().Unix(),
-        "modelUrl":  modelUrl,
-        "datasetUrl": datasetUrl,
-        "details":   "This is a mock proof object",
-    }
+    // Create a mock proof as a string
+    proof := fmt.Sprintf("Proof for model %s and dataset %s at %d", modelUrl, datasetUrl, time.Now().Unix())
     return accuracy, proof, nil
+}
+
+// Helper to ABI-encode the benchmark result
+func encodeBenchmarkResult(modelUrl, proof string, accuracy uint8) ([]byte, error) {
+	const resultABI = `[{"type":"tuple","components":[{"name":"modelUrl","type":"string"},{"name":"proof","type":"string"},{"name":"accuracy","type":"uint8"}]}]`
+	parsedABI, err := abi.JSON(strings.NewReader(resultABI))
+	if err != nil {
+		return nil, err
+	}
+	return parsedABI.Pack("", modelUrl, proof, accuracy)
 }
 
 func (tw *TaskWorker) HandleTask(t *performerV1.TaskRequest) (*performerV1.TaskResponse, error) {
@@ -96,22 +103,17 @@ func (tw *TaskWorker) HandleTask(t *performerV1.TaskRequest) (*performerV1.TaskR
 		tw.logger.Error("Benchmark failed", zap.Error(err))
 		return nil, err
 	}
-
+	
 	tw.logger.Sugar().Infow("Benchmarking completed",
 		zap.String("modelUrl", payload.ModelUrl),
 		zap.Uint8("accuracy", accuracy),
 		zap.String("proof", proof),
 	)
 
-
-	result := BenchmarkResult{
-		Proof:    proof,
-		Accuracy: accuracy,
-	}
-
-	resultBytes, err := json.Marshal(result)
+	// ABI-encode the result (modelUrl, proof, accuracy)
+	resultBytes, err := encodeBenchmarkResult(payload.ModelUrl, proof, accuracy)
 	if err != nil {
-		tw.logger.Error("Failed to marshal result JSON", zap.Error(err))
+		tw.logger.Error("Failed to ABI-encode result", zap.Error(err))
 		return nil, err
 	}
 

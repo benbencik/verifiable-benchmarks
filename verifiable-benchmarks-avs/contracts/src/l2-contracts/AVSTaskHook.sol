@@ -17,7 +17,8 @@ contract AVSTaskHook is IAVSTaskHook {
     // Store the result of a completed benchmark, mapping task hash to result struct
     struct BenchmarkResult {
         uint8 accuracy;
-        string proof; // JSON string
+        string proof; // plain string
+        string modelUrl;
     }
     mapping(bytes32 => BenchmarkResult) public benchmarkResults;
 
@@ -25,7 +26,7 @@ contract AVSTaskHook is IAVSTaskHook {
     mapping(bytes32 => bool) public verifiedTasks;
 
     event BenchmarkTaskCreated(bytes32 taskHash, string modelUrl, string datasetUrl);
-    event BenchmarkVerified(bytes32 taskHash, uint8 accuracy, string proof);
+    event BenchmarkVerified(bytes32 taskHash, uint8 accuracy, string proof, string modelUrl);
 
 
     // --- Hook Implementations ---
@@ -54,21 +55,17 @@ contract AVSTaskHook is IAVSTaskHook {
         // Ensure task hasn't been verified before
         require(!verifiedTasks[taskHash], "Task already verified");
 
-        // Decode the benchmark accuracy from the messageHash field
-        // We'll use the first byte of the messageHash to store our accuracy
-        uint8 accuracy = uint8(cert.messageHash[0]);
-
-        // Decode the proof from the signature field (assume it's a string encoded in bytes)
-        string memory proof = string(cert.signature);
+        // Decode the ABI-encoded result from cert.messageHash (now used as bytes)
+        (string memory modelUrl, string memory proof, uint8 accuracy) = abi.decode(abi.encodePacked(cert.messageHash), (string, string, uint8));
 
         // Perform validation check
         require(accuracy <= 100, "Accuracy cannot be > 100");
 
         // Store the result on-chain
-        benchmarkResults[taskHash] = BenchmarkResult({accuracy: accuracy, proof: proof});
+        benchmarkResults[taskHash] = BenchmarkResult({accuracy: accuracy, proof: proof, modelUrl: modelUrl});
         verifiedTasks[taskHash] = true;
 
         // Emit an event to confirm verification
-        emit BenchmarkVerified(taskHash, accuracy, proof);
+        emit BenchmarkVerified(taskHash, accuracy, proof, modelUrl);
     }
 }
