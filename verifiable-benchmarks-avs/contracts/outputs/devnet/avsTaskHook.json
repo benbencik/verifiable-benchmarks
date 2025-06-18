@@ -13,9 +13,19 @@
       "name": "benchmarkResults",
       "outputs": [
         {
+          "internalType": "string",
+          "name": "modelUrl",
+          "type": "string"
+        },
+        {
           "internalType": "uint8",
-          "name": "",
+          "name": "accuracy",
           "type": "uint8"
+        },
+        {
+          "internalType": "string",
+          "name": "proof",
+          "type": "string"
         }
       ],
       "stateMutability": "view",
@@ -215,13 +225,13 @@
         {
           "indexed": false,
           "internalType": "string",
-          "name": "modelId",
+          "name": "modelUrl",
           "type": "string"
         },
         {
           "indexed": false,
           "internalType": "string",
-          "name": "datasetId",
+          "name": "datasetUrl",
           "type": "string"
         }
       ],
@@ -242,6 +252,18 @@
           "internalType": "uint8",
           "name": "accuracy",
           "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "proof",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "modelUrl",
+          "type": "string"
         }
       ],
       "name": "BenchmarkVerified",

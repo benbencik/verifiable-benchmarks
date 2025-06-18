@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -27,9 +26,9 @@ type BenchmarkTaskPayload struct {
 
 // Struct for the result to be returned to the contract
 type BenchmarkResult struct {
-	Proof    string `json:"proof"`
-	Accuracy uint8  `json:"accuracy"`
-	ModelUrl string `json:"modelUrl"`
+	ModelUrl string
+	Accuracy uint8
+	Proof    string
 }
 
 func NewTaskWorker(logger *zap.Logger) *TaskWorker {
@@ -44,9 +43,9 @@ func (tw *TaskWorker) ValidateTask(t *performerV1.TaskRequest) error {
 		zap.Binary("taskData", t.Payload),
 	)
 
-	var payload BenchmarkTaskPayload
-	if err := json.Unmarshal(t.Payload, &payload); err != nil {
-		tw.logger.Error("Failed to unmarshal task data", zap.Error(err))
+	payload, err := decodeBenchmarkTaskPayload(t.Payload)
+	if err != nil {
+		tw.logger.Error("Failed to ABI-decode task data", zap.Error(err))
 		return fmt.Errorf("invalid task data format: %w", err)
 	}
 
@@ -71,14 +70,42 @@ func (tw *TaskWorker) toplocBenchmark(modelUrl, datasetUrl string) (uint8, strin
     return accuracy, proof, nil
 }
 
-// Helper to ABI-encode the benchmark result
-func encodeBenchmarkResult(modelUrl, proof string, accuracy uint8) ([]byte, error) {
-	const resultABI = `[{"type":"tuple","components":[{"name":"modelUrl","type":"string"},{"name":"proof","type":"string"},{"name":"accuracy","type":"uint8"}]}]`
+// ABI-encode as (string modelUrl, uint8 accuracy, string proof)
+func encodeBenchmarkResult(modelUrl string, accuracy uint8, proof string) ([]byte, error) {
+	const resultABI = `[{"type":"tuple","components":[{"name":"modelUrl","type":"string"},{"name":"accuracy","type":"uint8"},{"name":"proof","type":"string"}]}]`
 	parsedABI, err := abi.JSON(strings.NewReader(resultABI))
 	if err != nil {
 		return nil, err
 	}
-	return parsedABI.Pack("", modelUrl, proof, accuracy)
+	return parsedABI.Pack("", modelUrl, accuracy, proof)
+}
+
+func decodeBenchmarkTaskPayload(data []byte) (BenchmarkTaskPayload, error) {
+	const payloadABI = `[{"type":"tuple","components":[{"name":"modelUrl","type":"string"},{"name":"datasetUrl","type":"string"}]}]`
+	parsedABI, err := abi.JSON(strings.NewReader(payloadABI))
+	if err != nil {
+		return BenchmarkTaskPayload{}, err
+	}
+	unpacked, err := parsedABI.Unpack("", data)
+	if err != nil {
+		return BenchmarkTaskPayload{}, err
+	}
+	if len(unpacked) != 1 {
+		return BenchmarkTaskPayload{}, fmt.Errorf("unexpected unpacked length: %d", len(unpacked))
+	}
+	tuple, ok := unpacked[0].([]interface{})
+	if !ok || len(tuple) != 2 {
+		return BenchmarkTaskPayload{}, fmt.Errorf("unexpected tuple structure")
+	}
+	modelUrl, ok1 := tuple[0].(string)
+	datasetUrl, ok2 := tuple[1].(string)
+	if !ok1 || !ok2 {
+		return BenchmarkTaskPayload{}, fmt.Errorf("unexpected tuple element types")
+	}
+	return BenchmarkTaskPayload{
+		ModelUrl:   modelUrl,
+		DatasetUrl: datasetUrl,
+	}, nil
 }
 
 func (tw *TaskWorker) HandleTask(t *performerV1.TaskRequest) (*performerV1.TaskResponse, error) {
@@ -86,9 +113,9 @@ func (tw *TaskWorker) HandleTask(t *performerV1.TaskRequest) (*performerV1.TaskR
 		zap.String("taskId", hex.EncodeToString(t.TaskId)),
 	)
 
-	var payload BenchmarkTaskPayload
-	if err := json.Unmarshal(t.Payload, &payload); err != nil {
-		tw.logger.Error("HandleTask: Failed to unmarshal task data", zap.Error(err))
+	payload, err := decodeBenchmarkTaskPayload(t.Payload)
+	if err != nil {
+		tw.logger.Error("HandleTask: Failed to ABI-decode task data", zap.Error(err))
 		return nil, fmt.Errorf("invalid task data format: %w", err)
 	}
 
@@ -110,8 +137,8 @@ func (tw *TaskWorker) HandleTask(t *performerV1.TaskRequest) (*performerV1.TaskR
 		zap.String("proof", proof),
 	)
 
-	// ABI-encode the result (modelUrl, proof, accuracy)
-	resultBytes, err := encodeBenchmarkResult(payload.ModelUrl, proof, accuracy)
+	// ABI-encode the result (modelUrl, accuracy, proof)
+	resultBytes, err := encodeBenchmarkResult(payload.ModelUrl, accuracy, proof)
 	if err != nil {
 		tw.logger.Error("Failed to ABI-encode result", zap.Error(err))
 		return nil, err

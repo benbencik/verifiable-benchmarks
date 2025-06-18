@@ -16,9 +16,10 @@ contract AVSTaskHook is IAVSTaskHook {
 
     // Store the result of a completed benchmark, mapping task hash to result struct
     struct BenchmarkResult {
-        uint8 accuracy;
-        string proof; // plain string
         string modelUrl;
+        uint8 accuracy;
+        string proof;
+        
     }
     mapping(bytes32 => BenchmarkResult) public benchmarkResults;
 
@@ -55,14 +56,14 @@ contract AVSTaskHook is IAVSTaskHook {
         // Ensure task hasn't been verified before
         require(!verifiedTasks[taskHash], "Task already verified");
 
-        // Decode the ABI-encoded result from cert.messageHash (now used as bytes)
-        (string memory modelUrl, string memory proof, uint8 accuracy) = abi.decode(abi.encodePacked(cert.messageHash), (string, string, uint8));
+        // Decode the ABI-encoded result from cert.messageHash in the order (string, uint8, string)
+        (string memory modelUrl, uint8 accuracy, string memory proof) = abi.decode(cert.messageHash, (string, uint8, string));
 
         // Perform validation check
         require(accuracy <= 100, "Accuracy cannot be > 100");
 
         // Store the result on-chain
-        benchmarkResults[taskHash] = BenchmarkResult({accuracy: accuracy, proof: proof, modelUrl: modelUrl});
+        benchmarkResults[taskHash] = BenchmarkResult({modelUrl: modelUrl, accuracy: accuracy, proof: proof});
         verifiedTasks[taskHash] = true;
 
         // Emit an event to confirm verification
