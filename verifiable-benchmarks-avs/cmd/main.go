@@ -19,8 +19,15 @@ type TaskWorker struct {
 
 // This struct must match the one in your AVSTaskHook.sol contract
 type BenchmarkTaskPayload struct {
-	ModelId   string `json:"modelId"`
-	DatasetId string `json:"datasetId"`
+	ModelUrl   string `json:"modelUrl"`
+	DatasetUrl string `json:"datasetUrl"`
+}
+
+// Struct for the result to be returned to the contract
+// proof can be any JSON-serializable object, here as map[string]interface{}
+type BenchmarkResult struct {
+	Proof    map[string]interface{} `json:"proof"`
+	Accuracy uint8                  `json:"accuracy"`
 }
 
 func NewTaskWorker(logger *zap.Logger) *TaskWorker {
@@ -41,28 +48,30 @@ func (tw *TaskWorker) ValidateTask(t *performerV1.TaskRequest) error {
 		return fmt.Errorf("invalid task data format: %w", err)
 	}
 
-	if payload.ModelId == "" || payload.DatasetId == "" {
-		return fmt.Errorf("modelId and datasetId cannot be empty")
+	if payload.ModelUrl == "" || payload.DatasetUrl == "" {
+		return fmt.Errorf("modelUrl and datasetUrl cannot be empty")
 	}
 
 	tw.logger.Sugar().Info("Task validation successful")
 	return nil
 }
 
-// mockBenchmark simulates running a benchmark on an AI model
-func (tw *TaskWorker) mockBenchmark(modelId, datasetId string) (uint8, error) {
-	// Simulate some processing time
-	time.Sleep(2 * time.Second)
+// Here is the benchmarking function
+func (tw *TaskWorker) toplocBenchmark(modelUrl, datasetUrl string) (uint8, map[string]interface{}, error) {
+    // Simulate some processing time
+    time.Sleep(2 * time.Second)
 
-	// Generate a random accuracy between 85 and 99
-	accuracy := uint8(85 + rand.Intn(15))
+    // Generate a random accuracy between 85 and 99
+    accuracy := uint8(85 + rand.Intn(15))
 
-	// Simulate occasional failures
-	if rand.Float32() < 0.1 { // 10% chance of failure
-		return 0, fmt.Errorf("benchmark failed for model %s on dataset %s", modelId, datasetId)
-	}
-
-	return accuracy, nil
+    // Create a mock proof
+    proof := map[string]interface{}{
+        "timestamp": time.Now().Unix(),
+        "modelUrl":  modelUrl,
+        "datasetUrl": datasetUrl,
+        "details":   "This is a mock proof object",
+    }
+    return accuracy, proof, nil
 }
 
 func (tw *TaskWorker) HandleTask(t *performerV1.TaskRequest) (*performerV1.TaskResponse, error) {
@@ -76,25 +85,35 @@ func (tw *TaskWorker) HandleTask(t *performerV1.TaskRequest) (*performerV1.TaskR
 		return nil, fmt.Errorf("invalid task data format: %w", err)
 	}
 
-	tw.logger.Sugar().Infow("Starting benchmark",
-		zap.String("modelId", payload.ModelId),
-		zap.String("datasetId", payload.DatasetId),
+	tw.logger.Sugar().Infow("Starting benchmarking process...",
+		zap.String("modelUrl", payload.ModelUrl),
+		zap.String("datasetUrl", payload.DatasetUrl),
 	)
 
 	// Run the mock benchmark
-	accuracy, err := tw.mockBenchmark(payload.ModelId, payload.DatasetId)
+	accuracy, proof, err := tw.toplocBenchmark(payload.ModelUrl, payload.DatasetUrl)
 	if err != nil {
 		tw.logger.Error("Benchmark failed", zap.Error(err))
 		return nil, err
 	}
 
-	tw.logger.Sugar().Infow("Benchmark completed",
-		zap.String("modelId", payload.ModelId),
+	tw.logger.Sugar().Infow("Benchmarking completed",
+		zap.String("modelUrl", payload.ModelUrl),
 		zap.Uint8("accuracy", accuracy),
+		zap.String("proof", proof),
 	)
 
-	// Convert accuracy to a single byte
-	resultBytes := []byte{accuracy}
+
+	result := BenchmarkResult{
+		Proof:    proof,
+		Accuracy: accuracy,
+	}
+
+	resultBytes, err := json.Marshal(result)
+	if err != nil {
+		tw.logger.Error("Failed to marshal result JSON", zap.Error(err))
+		return nil, err
+	}
 
 	return &performerV1.TaskResponse{
 		TaskId: t.TaskId,

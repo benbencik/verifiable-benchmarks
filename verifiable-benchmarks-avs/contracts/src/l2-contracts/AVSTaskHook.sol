@@ -10,18 +10,22 @@ contract AVSTaskHook is IAVSTaskHook {
 
     // Data needed for the benchmark task
     struct BenchmarkTaskPayload {
-        string modelId;
-        string datasetId;
+        string modelUrl;
+        string datasetUrl;
     }
 
-    // Store the result of a completed benchmark, mapping task hash to accuracy
-    mapping(bytes32 => uint8) public benchmarkResults;
+    // Store the result of a completed benchmark, mapping task hash to result struct
+    struct BenchmarkResult {
+        uint8 accuracy;
+        string proof; // JSON string
+    }
+    mapping(bytes32 => BenchmarkResult) public benchmarkResults;
 
     // Track which tasks have been verified to prevent double verification
     mapping(bytes32 => bool) public verifiedTasks;
 
-    event BenchmarkTaskCreated(bytes32 taskHash, string modelId, string datasetId);
-    event BenchmarkVerified(bytes32 taskHash, uint8 accuracy);
+    event BenchmarkTaskCreated(bytes32 taskHash, string modelUrl, string datasetUrl);
+    event BenchmarkVerified(bytes32 taskHash, uint8 accuracy, string proof);
 
 
     // --- Hook Implementations ---
@@ -31,8 +35,8 @@ contract AVSTaskHook is IAVSTaskHook {
         bytes memory payload
     ) external pure {
         BenchmarkTaskPayload memory task = abi.decode(payload, (BenchmarkTaskPayload));
-        require(bytes(task.modelId).length > 0, "Model ID cannot be empty");
-        require(bytes(task.datasetId).length > 0, "Dataset ID cannot be empty");
+        require(bytes(task.modelUrl).length > 0, "Model URL cannot be empty");
+        require(bytes(task.datasetUrl).length > 0, "Dataset URL cannot be empty");
     }
 
     function validatePostTaskCreation(
@@ -54,14 +58,17 @@ contract AVSTaskHook is IAVSTaskHook {
         // We'll use the first byte of the messageHash to store our accuracy
         uint8 accuracy = uint8(cert.messageHash[0]);
 
+        // Decode the proof from the signature field (assume it's a string encoded in bytes)
+        string memory proof = string(cert.signature);
+
         // Perform validation check
         require(accuracy <= 100, "Accuracy cannot be > 100");
 
         // Store the result on-chain
-        benchmarkResults[taskHash] = accuracy;
+        benchmarkResults[taskHash] = BenchmarkResult({accuracy: accuracy, proof: proof});
         verifiedTasks[taskHash] = true;
 
         // Emit an event to confirm verification
-        emit BenchmarkVerified(taskHash, accuracy);
+        emit BenchmarkVerified(taskHash, accuracy, proof);
     }
 }
