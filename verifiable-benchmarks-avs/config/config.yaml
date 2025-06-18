@@ -1,0 +1,10 @@
+version: 0.0.2
+config:
+    project:
+        name: verifiable-benchmarks-avs
+        version: 0.1.0
+        context: devnet
+        project_uuid: e2a534ad-70f9-4b36-8c80-bff23b334092
+        telemetry_enabled: false
+        templateBaseUrl: https://github.com/Layr-Labs/hourglass-avs-template
+        templateVersion: v0.0.12
