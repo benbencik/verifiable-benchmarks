@@ -16,10 +16,7 @@ Our system leverages the core ideas of the TOPLOC protocol:
 
 - **Proof Robustness:**  
   The approach is robust to typical sources of nondeterminism (e.g., GPU computation ordering) and algebraic rewrites, ensuring that honest recomputation by a verifier matches the submitted proof.
-
-- **Merkle Tree Aggregation:**  
-  For each data point, an inference proof is generated (encoded in base64), and the collection of these proofs is aggregated into a Merkle tree. This further reduces on-chain storage and enables batch verification.
-
+  
 ## System Architecture
 
 ### Off-chain Verification with EigenLayer AVS
@@ -28,9 +25,6 @@ We integrate [EigenLayer AVS (Actively Validated Services)](https://docs.eigenla
 
 - **Proof Generation:**  
   Each inference request produces a compact, base64-encoded proof of correct execution.
-
-- **Merkle Aggregation:**  
-  Proofs for multiple inputs are bundled via a Merkle tree. Only the root (and necessary branches for disputes) need be stored or verified on-chain, minimizing data footprint.
 
 - **AVS Verification:**  
   Validators in the EigenLayer AVS network independently recompute the inference and check the submitted proof against their own recomputation, using the TOPLOC encoding. Discrepancies can trigger slashing or dispute resolution.
