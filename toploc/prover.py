@@ -21,7 +21,7 @@ class ModelProver:
         print(f"Generating proof for model {self.model.__class__.__name__}...")
         
         # Ensure model is in evaluation mode
-        self.model.eval() 
+        # self.model.eval() 
 
         # Get the real activations from the model's hidden layer
         with torch.no_grad():
@@ -46,8 +46,7 @@ class ModelProver:
         
         # Prepare data for proof JSON
         # Convert samples_tensor to a list of lists (numpy arrays) for JSON serialization
-        samples_list = samples_tensor.to(dtype=torch.float32).cpu().numpy().tolist()
-        # samples_list = samples_tensor.cpu().numpy().tolist()
+        samples_list = samples_tensor.tolist()
 
         return {
             "proofs_base64": proofs_base64,

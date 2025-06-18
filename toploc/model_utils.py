@@ -5,11 +5,14 @@ import numpy as np
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from huggingface_hub import hf_hub_download
+import pandas as pd
 import json
 import os
 import sys
 from datetime import datetime
 import importlib
+from urllib.parse import urlparse
 
 #  Add the directory containing the `models` folder to the Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -69,9 +72,11 @@ def save_model_with_metadata(model, prover_params, model_data_type=torch.bfloat1
     model_filename = os.path.join(TRAINED_MODELS_DIR, f"{model_id}.pt")
     metadata_filename = os.path.join(TRAINED_MODELS_DIR, f"{model_id}.json")
 
+    model = model.to(dtype=model_data_type)
+    model.eval()
+
     # Save model state dictionary
-    torch.save(model.state_dict(), model_filename)
-    print(f"Model saved to {model_filename}")
+    torch.save(model, model_filename)
 
     # Prepare metadata
     metadata = {
@@ -129,3 +134,45 @@ def load_model_with_metadata(model_id):
     print(f"Model {model_id} loaded successfully from {model_path}")
     
     return model, metadata
+
+def load_model_from_hf(url: str):
+    parsed = urlparse(url)
+    path_parts = parsed.path.strip("/").split("/")
+    
+    if "blob" in path_parts:
+        repo_id = "/".join(path_parts[:2])
+        filename = path_parts[-1]
+    elif "resolve" in path_parts:
+        repo_id = "/".join(path_parts[:2])
+        filename = path_parts[-1]
+    else:
+        raise ValueError("Unexpected Hugging Face URL format. Expecting /blob/ or /resolve/ in the path.")
+
+    model_path = hf_hub_download(repo_id=repo_id, filename=filename)
+    model = torch.load(model_path, map_location="cpu", weights_only=False)
+    return model
+
+def load_dataset_from_hf(url):
+    parsed = urlparse(url)
+    path_parts = parsed.path.strip("/").split("/")
+    
+    if "blob" in path_parts:
+        repo_id = "/".join(path_parts[1:3])
+        filename = path_parts[-1]
+    elif "resolve" in path_parts:
+        repo_id = "/".join(path_parts[:2])
+        filename = path_parts[-1]
+    else:
+        raise ValueError("Unexpected Hugging Face URL format. Expecting /blob/ or /resolve/ in the path.")
+
+    csv_path = hf_hub_download(repo_id=repo_id, filename=filename, repo_type="dataset")
+    df = pd.read_csv(csv_path)
+
+    # ! Assuming last column is the target
+    X = df.iloc[:, :-1].values
+    y = df.iloc[:, -1].values
+
+    X = torch.tensor(X, dtype=torch.bfloat16)
+    y = torch.tensor(y, dtype=torch.long)
+    
+    return X, y

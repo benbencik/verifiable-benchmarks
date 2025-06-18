@@ -16,6 +16,7 @@ class SimpleNet(nn.Module):
         # run through all but final Linear to grab last hidden state
         for layer in self.net[:-1]:
             x = layer(x)
+        # ! model is required to return the activation
         hidden = x.clone()   # <-- last hidden activation
         output = self.net[-1](x)       # final linear layer
         return output, hidden
