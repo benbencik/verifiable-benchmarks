@@ -19,9 +19,7 @@ class ModelProver:
     def save_trained_model(self, prover_params, model_data_type=torch.bfloat16):
         return save_model_with_metadata(self.model, prover_params, model_data_type)
 
-    def generate_proof(self, samples_tensor, prover_params):
-        print(f"Generating proof for model {self.model.__class__.__name__}...")
-        
+    def generate_proof(self, samples_tensor, prover_params):        
         # Get the real activations from the model's hidden layer
         with torch.no_grad():
             output, original_activations_list = self.model(samples_tensor)
@@ -32,7 +30,7 @@ class ModelProver:
 
         # The `toploc` library expects a list of tensors
         original_activations = [act for act in original_activations_list]
-        print(f"Extracted {len(original_activations)} activation tensors.")
+        # print(f"Extracted {len(original_activations)} activation tensors.")
 
         # Build verifiable proofs
         proofs_base64 = build_proofs_base64(
@@ -41,6 +39,9 @@ class ModelProver:
             topk=prover_params["topk"],
             skip_prefill=prover_params["skip_prefill"]
         )
+        
+        concatenated_proof = '~'.join(proofs_base64)  # Join proofs into a single string for storage
+        
         print("Proofs generated successfully.")
         
         # Prepare data for proof JSON
@@ -48,7 +49,7 @@ class ModelProver:
         samples_list = samples_tensor.tolist()
 
         return {
-            "proofs_base64": proofs_base64,
+            "proofs_base64": concatenated_proof,
             "samples_input": samples_list,
             "predicted_classes": predicted_classes,
             "prover_params_used": prover_params
@@ -59,11 +60,11 @@ class ModelProver:
         time_now = time.time_ns()
         proof_filename = os.path.join(PROOFS_DIR, f"proof_{time_now}.json")
         accuracy = round(sklearn.metrics.accuracy_score(proof_data["predicted_classes"], y), 3)
+        print(f"Calculated accuracy: {accuracy}")
         
         data = {
             "model_url": model_url,
             "datset_url": dataset_url,
-            "accuracy": accuracy,
             "proof": proof_data["proofs_base64"],
         }
 

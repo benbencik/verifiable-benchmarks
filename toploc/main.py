@@ -21,6 +21,8 @@ def main():
     parser.add_argument("--dataset_url", required=True, help="Hugging Face URL to CSV dataset with last columns as labels")
     parser.add_argument("--model_url", required=True, help="Hugging Face URL to .pt model file")
     parser.add_argument("--task", choices=["predict", "verify"], required=True, help="Task to run: predict or verify")
+    parser.add_argument("--accuracy", help="Promissed int accuracy 0 to 1")
+    parser.add_argument("--proof", help="Provided proof in single string deleimited by ~")
 
     args = parser.parse_args()
     dataset_url = args.dataset_url
@@ -38,13 +40,15 @@ def main():
     }
 
     if task == "verify":
+        proof = args.proof
+        
         verifier = Verifier()
-        results_success, prover_preds, verifier_preds = verifier.verify_proof(model, proof_filename, X, y)
+        results_success = verifier.verify_proof(model, proof, prover_params, X, y)
         print("Verification success:", results_success)
     elif task == "predict":
         prover = ModelProver(model)
         proof_data = prover.generate_proof(X, prover_params)
-        proof_filename = prover.store_proof(proof_data, model_url, dataset_url, y)
+        prover.store_proof(proof_data, model_url, dataset_url, y)
 
 if __name__ == "__main__":
     main()

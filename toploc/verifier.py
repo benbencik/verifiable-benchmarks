@@ -1,7 +1,7 @@
 import sklearn.metrics
 import torch
-import json
 import os
+import re
 import numpy as np
 import sklearn
 from toploc import verify_proofs_base64
@@ -16,23 +16,11 @@ class Verifier:
     def __init__(self):
         pass
 
-    def verify_proof(self, model, proof_filename, X, y):
-        print(f"\n--- Starting Verification for {proof_filename} ---")
+    def verify_proof(self, model, proof, prover_params, X, y):
+        proofs_base64 = proof.split('~')
         
-        if not os.path.exists(proof_filename):
-            raise FileNotFoundError(f"Proof file not found: {proof_filename}")
-
-        with open(proof_filename, 'r') as f:
-            proof_data = json.load(f)
-
-        model_id = proof_data["model_id"]
-        proofs_base64 = proof_data["proofs_base64"]
-        samples_input_list = proof_data["samples_input"]
-        prover_params_used = proof_data["prover_params_used"]
-        predicted_classes = proof_data["predicted_classes"]
-
-        print(f"Loading model and metadata for Model ID: {model_id}")
-        # model, metadata = load_model_with_metadata(model_id)
+        prover_params_used = prover_params
+        
 
         # Reconstruct samples tensor from the list
         # Ensure the dtype matches what was used during proving (from metadata)
@@ -46,16 +34,19 @@ class Verifier:
 
         # samples_tensor = torch.tensor(samples_input_list, dtype=torch.bfloat16)
         
-        print("Recomputing activations using the loaded model and input samples...")
+        print("Recomputing activations using the loaded model and dataset...")
         # model.eval() # Ensure model is in evaluation mode?
         with torch.no_grad():
             recomputed_output, recomputed_activations_list = model(X)
         
         recomputed_activations = [act for act in recomputed_activations_list]
-        recomputed_predicted_classes = np.argmax(recomputed_output.to(dtype=torch.float32).numpy(), axis=1).tolist()
-        accuracy = sklearn.metrics.accuracy_score(recomputed_predicted_classes, y)
-        print(accuracy)
+        
+        # recomputed_predicted_classes = np.argmax(recomputed_output.to(dtype=torch.float32).numpy(), axis=1).tolist()
+        # accuracy_recomputed = round(sklearn.metrics.accuracy_score(recomputed_predicted_classes, y),3)
+        # print(f"Recomputed accuracy: {accuracy_recomputed}, Promised accuracy: {accuracy}")
 
+        # if accuracy_recomputed != accuracy:
+        #     return False
 
         print("Running `toploc` verification...")
         verification_results = verify_proofs_base64(
@@ -65,11 +56,25 @@ class Verifier:
             topk=prover_params_used["topk"],
             skip_prefill=prover_params_used["skip_prefill"]
         )
+
+        # print(verification_results)
+        # print(type(verification_results[0]))
         
+        for i in verification_results:
+            i = str(i)
+            matches = re.findall(r'VerificationResult\[exp_mismatches=(\d+), mant_err_mean=([\d.]+), mant_err_median=([\d.]+)\]', i)
+            parsed_results = [{'exp_mismatches': int(a), 'mant_err_mean': float(b), 'mant_err_median': float(c)} for a, b, c in matches]
+            
+            m = 0
+            for result in parsed_results:
+                m = max(m, result['exp_mismatches'])
+            if m > 0:
+                return False
+
         # print("\nVerification Results:")
         # print(f"Prover's Predicted Classes: {predicted_classes}")
         # print(f"Verifier's Recomputed Predicted Classes: {recomputed_predicted_classes}")
         # print(f"Toploc Proof Verification Status: {verification_results}")
         # print(f"--- Verification Complete for {proof_filename} ---\n")
         
-        return verification_results, predicted_classes, recomputed_predicted_classes
+        return True
