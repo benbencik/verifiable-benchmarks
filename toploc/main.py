@@ -1,11 +1,11 @@
 import os
 import shutil
+import argparse
+
 from model_utils import load_dataset_from_hf, load_model_from_hf
 from prover import ModelProver, PROOFS_DIR, TRAINED_MODELS_DIR
 from verifier import Verifier
 
-
-# Clean up previous runs for a fresh start
 def cleanup():
     if os.path.exists(PROOFS_DIR):
         shutil.rmtree(PROOFS_DIR)
@@ -16,62 +16,35 @@ def cleanup():
     os.makedirs(PROOFS_DIR, exist_ok=True)
     os.makedirs(TRAINED_MODELS_DIR, exist_ok=True)
 
+def main():
+    parser = argparse.ArgumentParser(description="Run proof generation or verification")
+    parser.add_argument("--dataset_url", required=True, help="Hugging Face URL to CSV dataset with last columns as labels")
+    parser.add_argument("--model_url", required=True, help="Hugging Face URL to .pt model file")
+    parser.add_argument("--task", choices=["predict", "verify"], required=True, help="Task to run: predict or verify")
 
-if __name__ == "__main__":
-    # cleanup()
-   
+    args = parser.parse_args()
+    dataset_url = args.dataset_url
+    model_url = args.model_url
+    task = args.task
+
+    # Load dataset and model
+    X, y = load_dataset_from_hf(dataset_url)
+    model = load_model_from_hf(model_url)
+
     prover_params = {
         "decode_batching_size": 1,
         "topk": 4,
         "skip_prefill": False
     }
-    
-    # X_train, y_train, X_test, y_test = load_and_prepare_dataset()
-    
-    # # --- Training Phase ---
-    # print("Training the model...")
-    # model = SimpleNet()
-    # train_model(model, X_train, y_train, epochs=200, lr=0.01)
-    # print("Model training completed.")
-    # print("\n" + "="*50 + "\n")
-    
-    # # Save the trained model with its metadata
-    # _, _, _ = save_model_with_metadata(model, prover_params)
-    
-    # exit(0)
-    
-    X, y = load_dataset_from_hf("https://huggingface.co/datasets/benbencik/eigen-datasets/blob/main/iris.csv")
-    model = load_model_from_hf("https://huggingface.co/benbencik/eigen-models/blob/main/SimpleNet_20250618162512.pt")
-    
-    
-    # Instantiate the Prover
-    prover = ModelProver(model)
 
-    # Save the trained model with its metadata
-    # model_id, model_path, metadata_path = prover.save_trained_model(prover_params)
-    # print(f"Model ID for this run: {model_id}")
+    if task == "verify":
+        verifier = Verifier()
+        results_success, prover_preds, verifier_preds = verifier.verify_proof(model, proof_filename, X, y)
+        print("Verification success:", results_success)
+    elif task == "predict":
+        prover = ModelProver(model)
+        proof_data = prover.generate_proof(X, prover_params)
+        proof_filename = prover.store_proof(proof_data, model_url, dataset_url, y)
 
-    # Select samples for proving
-    # print(f"True labels for samples: {y.numpy()}")
-
-    # Generate the proof
-    proof_data = prover.generate_proof(X, prover_params)
-    proof_filename = prover.store_proof(proof_data)
-
-    print("\n" + "="*50 + "\n")
-
-    # --- Verification Phase ---
-    verifier = Verifier()
-
-    # Scenario 1: Successful verification
-    results_success, prover_preds, verifier_preds = verifier.verify_proof(model, proof_filename, X, y)
-    # print("Scenario 1: Verifying with the original proof (expecting SUCCESS)")
-    # print(f"Verification Success Status: {results_success}")
-    # # You can further check if prover_preds == verifier_preds for classification tasks
-    # print(f"Prover's predictions: {prover_preds}, Verifier's recomputed predictions: {verifier_preds}")
-    # print(f"Do predicted classes match after recomputation? {prover_preds == verifier_preds}")
-
-
-    # Scenario 2: Simulate a challenge/tampering (e.g., altered proof data)
-    
-    
+if __name__ == "__main__":
+    main()

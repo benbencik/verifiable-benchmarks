@@ -53,7 +53,6 @@ class Verifier:
         
         recomputed_activations = [act for act in recomputed_activations_list]
         recomputed_predicted_classes = np.argmax(recomputed_output.to(dtype=torch.float32).numpy(), axis=1).tolist()
-        print(recomputed_predicted_classes, y)
         accuracy = sklearn.metrics.accuracy_score(recomputed_predicted_classes, y)
         print(accuracy)
 

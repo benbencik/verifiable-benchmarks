@@ -1,7 +1,9 @@
 import torch
 import json
 import os
+import time
 import numpy as np
+import sklearn
 from toploc import build_proofs_base64
 from model_utils import save_model_with_metadata, load_model_with_metadata, TRAINED_MODELS_DIR
 
@@ -20,9 +22,6 @@ class ModelProver:
     def generate_proof(self, samples_tensor, prover_params):
         print(f"Generating proof for model {self.model.__class__.__name__}...")
         
-        # Ensure model is in evaluation mode
-        # self.model.eval() 
-
         # Get the real activations from the model's hidden layer
         with torch.no_grad():
             output, original_activations_list = self.model(samples_tensor)
@@ -55,13 +54,20 @@ class ModelProver:
             "prover_params_used": prover_params
         }
     
-    def store_proof(self, model_id, proof_data):
-        proof_filename = os.path.join(PROOFS_DIR, f"proof_{model_id}.json")
+    def store_proof(self, proof_data, model_url, dataset_url ,y):
         
-        # Add the model_id to the proof data for easy linkage during verification
-        proof_data["model_id"] = model_id
+        time_now = time.time_ns()
+        proof_filename = os.path.join(PROOFS_DIR, f"proof_{time_now}.json")
+        accuracy = round(sklearn.metrics.accuracy_score(proof_data["predicted_classes"], y), 3)
+        
+        data = {
+            "model_url": model_url,
+            "datset_url": dataset_url,
+            "accuracy": accuracy,
+            "proof": proof_data["proofs_base64"],
+        }
 
         with open(proof_filename, 'w') as f:
-            json.dump(proof_data, f, indent=4)
+            json.dump(data, f)
         print(f"Proof stored to {proof_filename}")
         return proof_filename
