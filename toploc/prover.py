@@ -6,6 +6,8 @@ import numpy as np
 import sklearn
 from toploc import build_proofs_base64
 from model_utils import save_model_with_metadata, load_model_with_metadata, TRAINED_MODELS_DIR
+import torch.nn.functional as F
+
 
 # Ensure the proofs directory exists
 PROOFS_DIR = "proofs"
@@ -25,8 +27,9 @@ class ModelProver:
             output, original_activations_list = self.model(samples_tensor)
 
         # Convert output to numpy for result interpretation (optional for proof)
-        output_np = output.to(dtype=torch.float32).numpy()
-        predicted_classes = np.argmax(output_np, axis=1).tolist()
+        # output_np = output.to(dtype=torch.float32).numpy()
+        predicted_classes = torch.argmax(output, dim=1).tolist()
+        # predicted_classes = np.argmax(output_np, axis=1).tolist()
 
         # The `toploc` library expects a list of tensors
         original_activations = [act for act in original_activations_list]
@@ -60,6 +63,9 @@ class ModelProver:
         time_now = time.time_ns()
         proof_filename = os.path.join(PROOFS_DIR, f"proof_{time_now}.json")
         accuracy = round(sklearn.metrics.accuracy_score(proof_data["predicted_classes"], y), 3)
+        
+        print(y)
+              
         print(f"Calculated accuracy: {accuracy}")
         
         data = {
