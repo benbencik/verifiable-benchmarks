@@ -43,7 +43,7 @@ std::tuple<std::vector<int32_t>, std::vector<int32_t>> get_fp_parts(
     omp_set_num_threads(num_threads);
     
     if (is_bf16) {
-        const uint16_t* bits_ptr = reinterpret_cast<const uint16_t*>(tensor.const_data_ptr<at::BFloat16>());
+        const uint16_t* bits_ptr = reinterpret_cast<const uint16_t*>(tensor.data_ptr<at::BFloat16>());
         #pragma omp parallel for
         for (size_t i = 0; i < num_elements; ++i) {
             uint16_t bits = bits_ptr[i];
@@ -51,7 +51,7 @@ std::tuple<std::vector<int32_t>, std::vector<int32_t>> get_fp_parts(
             prefill_mants[i] = bits & BF16_MANT_MASK;
         }
     } else {
-        const uint32_t* bits_ptr = reinterpret_cast<const uint32_t*>(tensor.const_data_ptr<float>());
+        const uint32_t* bits_ptr = reinterpret_cast<const uint32_t*>(tensor.data_ptr<float>());
         #pragma omp parallel for
         for (size_t i = 0; i < num_elements; ++i) {
             uint32_t bits = bits_ptr[i];

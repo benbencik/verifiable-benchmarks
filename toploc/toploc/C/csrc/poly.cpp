@@ -238,9 +238,9 @@ public:
         // TODO: Make this work with int64_t x
         std::vector<int> x_vec;
         if (x.dtype() == torch::kLong) {
-            x_vec = std::vector<int>(x.const_data_ptr<int64_t>(), x.const_data_ptr<int64_t>() + x.numel());
+            x_vec = std::vector<int>(x.data_ptr<int64_t>(), x.data_ptr<int64_t>() + x.numel());
         } else if (x.dtype() == torch::kInt32 || x.dtype() == torch::kUInt32) {
-            x_vec = std::vector<int>(x.const_data_ptr<int>(), x.const_data_ptr<int>() + x.numel());
+            x_vec = std::vector<int>(x.data_ptr<int>(), x.data_ptr<int>() + x.numel());
         } else {
             throw std::invalid_argument("x must be of dtype [int32, uint32, long]");
         } 
@@ -249,28 +249,28 @@ public:
         std::vector<int> y_vec;
         if (y.dtype() == torch::kBFloat16) {
             y_vec = std::vector<int>(
-                reinterpret_cast<const uint16_t*>(y.const_data_ptr<c10::BFloat16>()),
-                reinterpret_cast<const uint16_t*>(y.const_data_ptr<c10::BFloat16>() + y.numel())
+                reinterpret_cast<const uint16_t*>(y.data_ptr<c10::BFloat16>()),
+                reinterpret_cast<const uint16_t*>(y.data_ptr<c10::BFloat16>() + y.numel())
             );
         } else if (y.dtype() == torch::kFloat16) {
             y_vec = std::vector<int>(
-                reinterpret_cast<const uint16_t*>(y.const_data_ptr<c10::Half>()),
-                reinterpret_cast<const uint16_t*>(y.const_data_ptr<c10::Half>() + y.numel())
+                reinterpret_cast<const uint16_t*>(y.data_ptr<c10::Half>()),
+                reinterpret_cast<const uint16_t*>(y.data_ptr<c10::Half>() + y.numel())
             );
         } else if (y.dtype() == torch::kInt32) {
             y_vec = std::vector<int>(
-                y.const_data_ptr<int32_t>(),
-                y.const_data_ptr<int32_t>() + y.numel()
+                y.data_ptr<int32_t>(),
+                y.data_ptr<int32_t>() + y.numel()
             );
         } else if (y.dtype() == torch::kUInt32) {
             y_vec = std::vector<int>(
-                y.const_data_ptr<uint32_t>(),
-                y.const_data_ptr<uint32_t>() + y.numel()
+                y.data_ptr<uint32_t>(),
+                y.data_ptr<uint32_t>() + y.numel()
             );
         } else if (y.dtype() == torch::kLong) {
             y_vec = std::vector<int>(
-                y.const_data_ptr<int64_t>(),
-                y.const_data_ptr<int64_t>() + y.numel()
+                y.data_ptr<int64_t>(),
+                y.data_ptr<int64_t>() + y.numel()
             );
         } else if (y.dtype() == torch::kFloat32) {
             throw std::invalid_argument("float32 not supported yet because interpolate has hardcode prime");

@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  toploc:
+    build: .
+    ports:
+      - "6500:6500"
+    volumes:
+      - ./trained_models:/app/trained_models
+      - ./models:/app/models
+      - ./proofs:/app/proofs
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+    restart: unless-stopped 

@@ -5,7 +5,7 @@ from torch.utils.cpp_extension import BuildExtension, CppExtension
 
 CSRC_DIR = os.path.join("toploc", "C", "csrc")
 
-# Define mac-specific compiler and linker flags
+# Define compiler and linker flags
 if os.environ.get("DEBUG"):
     extra_compile_args = ["-DDEBUG", "-O0"]
 else:
@@ -13,15 +13,20 @@ else:
 
 extra_link_args: list[str] = []
 
-# Add macOS specific flags
+# Add platform-specific flags
 if platform.system() == "Darwin":
-    # Enable support for both Intel and Apple Silicon
+    # macOS specific flags
     extra_compile_args.extend(["-arch", "x86_64", "-arch", "arm64"])
     extra_link_args.extend(["-arch", "x86_64", "-arch", "arm64"])
-
-    # Add minimum deployment target for macOS
     extra_compile_args.append("-mmacosx-version-min=10.13")
     extra_link_args.append("-mmacosx-version-min=10.13")
+    # OpenMP for macOS
+    extra_compile_args.extend(["-Xpreprocessor", "-fopenmp"])
+    extra_link_args.extend(["-lomp"])
+elif platform.system() == "Linux":
+    # Linux specific flags
+    extra_compile_args.extend(["-fopenmp"])
+    extra_link_args.extend(["-fopenmp"])
 
 extensions = [
     CppExtension(
