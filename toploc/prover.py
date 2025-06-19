@@ -45,7 +45,7 @@ class ModelProver:
         
         concatenated_proof = '~'.join(proofs_base64)  # Join proofs into a single string for storage
         
-        print("Proofs generated successfully.")
+        # print("Proofs generated successfully.")
         
         # Prepare data for proof JSON
         # Convert samples_tensor to a list of lists (numpy arrays) for JSON serialization

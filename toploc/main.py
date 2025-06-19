@@ -46,7 +46,8 @@ def main():
     elif task == "predict":
         prover = ModelProver(model)
         proof_data = prover.generate_proof(X, prover_params)
-        prover.store_proof(proof_data, model_url, dataset_url, y)
+        print(proof_data["proofs_base64"])
+        # prover.store_proof(proof_data, model_url, dataset_url, y)
 
 if __name__ == "__main__":
     main()
