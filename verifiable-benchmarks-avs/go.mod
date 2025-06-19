@@ -6,6 +6,7 @@ require (
 	github.com/Layr-Labs/hourglass-monorepo/ponos v0.0.0-20250516160557-195c62a908e3
 	github.com/Layr-Labs/protocol-apis v1.12.1
 	github.com/ethereum/go-ethereum v1.15.7
+	github.com/mr-tron/base58 v1.2.0
 	go.uber.org/zap v1.27.0
 )
 

@@ -10,22 +10,12 @@
           "type": "bytes32"
         }
       ],
-      "name": "benchmarkResults",
+      "name": "benchmarkResultCIDs",
       "outputs": [
         {
-          "internalType": "string",
-          "name": "modelUrl",
-          "type": "string"
-        },
-        {
-          "internalType": "uint8",
-          "name": "accuracy",
-          "type": "uint8"
-        },
-        {
-          "internalType": "string",
-          "name": "proof",
-          "type": "string"
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
         }
       ],
       "stateMutability": "view",
@@ -70,13 +60,13 @@
         },
         {
           "internalType": "bytes",
-          "name": "payload",
+          "name": "",
           "type": "bytes"
         }
       ],
       "name": "validatePreTaskCreation",
       "outputs": [],
-      "stateMutability": "pure",
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -224,18 +214,12 @@
         },
         {
           "indexed": false,
-          "internalType": "string",
-          "name": "modelUrl",
-          "type": "string"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "datasetUrl",
-          "type": "string"
+          "internalType": "bytes32",
+          "name": "ipfsCID",
+          "type": "bytes32"
         }
       ],
-      "name": "BenchmarkTaskCreated",
+      "name": "BenchmarkResultSubmitted",
       "type": "event"
     },
     {
@@ -246,27 +230,9 @@
           "internalType": "bytes32",
           "name": "taskHash",
           "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint8",
-          "name": "accuracy",
-          "type": "uint8"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "proof",
-          "type": "string"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "modelUrl",
-          "type": "string"
         }
       ],
-      "name": "BenchmarkVerified",
+      "name": "BenchmarkTaskCreated",
       "type": "event"
     }
   ]
