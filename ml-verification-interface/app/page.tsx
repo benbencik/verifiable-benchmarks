@@ -16,6 +16,7 @@ interface ProofData {
   datasetUrl: string
   proof: string
   merkleRoot: string
+  accuracy: string
 }
 
 interface VerificationResult {
@@ -60,45 +61,34 @@ export default function MLVerificationInterface() {
     setIsGenerating(true)
     setProgress(0)
 
-    const steps = [
-      "Loading model and dataset...",
-      "Running inference...",
-      "Computing activation hashes...",
-      "Generating TOPLOC proof...",
-      "Creating Merkle tree...",
-      "Encoding proof...",
-    ]
-
-    for (let i = 0; i < steps.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 800))
-      setProgress(((i + 1) / steps.length) * 100)
+    // Call the backend API to generate the proof
+    try {
+      const response = await fetch('/api/toploc-proof', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modelUrl: 'https://defillama.com/chain/ethereum/modelUrl',
+          dataUrl: 'https://defillama.com/chain/ethereum/dataUrl',
+        }),
+      })
+      const data = await response.json()
+      if (data.error) throw new Error(data.error)
+      setProofData({
+        modelUrl: 'https://defillama.com/chain/ethereum/modelUrl',
+        datasetUrl: 'https://defillama.com/chain/ethereum/dataUrl',
+        proof: data.proofLines.join('\n'),
+        merkleRoot: '', // You can update this if the proof includes a Merkle root
+        accuracy: data.accuracy,
+      })
+    } catch (err) {
+      setProofData({
+        modelUrl: 'https://defillama.com/chain/ethereum/modelUrl',
+        datasetUrl: 'https://defillama.com/chain/ethereum/dataUrl',
+        proof: 'Error generating proof',
+        merkleRoot: '',
+        accuracy: 'N/A',
+      })
     }
-
-    // Generate mock proof with realistic accuracy
-    const mockAccuracy = (Math.random() * 10 + 90).toFixed(2) // 90-100%
-    const mockProof = btoa(
-      JSON.stringify({
-        version: "toploc-v1.0",
-        activationHashes: Array.from({ length: 10 }, () => Math.random().toString(36).substring(7)),
-        topKIndices: Array.from({ length: 5 }, () => Math.floor(Math.random() * 1000)),
-        polynomialCoeff: Math.random().toString(36).substring(7),
-        modelHash: Math.random().toString(16).substring(2, 18),
-        timestamp: Date.now(),
-        accuracy: mockAccuracy,
-        modelUrl: generateForm.modelUrl,
-        datasetUrl: generateForm.datasetUrl,
-      }),
-    )
-
-    const mockMerkleRoot = Array.from({ length: 8 }, () => Math.random().toString(16).substring(2, 10)).join("")
-
-    setProofData({
-      modelUrl: generateForm.modelUrl,
-      datasetUrl: generateForm.datasetUrl,
-      proof: mockProof,
-      merkleRoot: mockMerkleRoot,
-    })
-
     setIsGenerating(false)
     setProgress(0)
   }
@@ -260,24 +250,17 @@ export default function MLVerificationInterface() {
                 {proofData ? (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Base64 Encoded Proof</Label>
-                      <Textarea value={proofData.proof} readOnly className="font-mono text-xs" rows={4} />
+                      <Label>Proof (split by ~)</Label>
+                      <div className="font-mono text-xs bg-slate-100 p-2 rounded border whitespace-pre-line">
+                        {proofData.proof.split('\n').map((line, idx) => (
+                          <div key={idx}>{line}</div>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Merkle Root</Label>
-                      <div className="font-mono text-xs bg-slate-100 p-2 rounded border">0x{proofData.merkleRoot}</div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-2 text-sm">
-                      <div>
-                        <Label>Model URL</Label>
-                        <p className="text-slate-600 text-xs break-all">{proofData.modelUrl}</p>
-                      </div>
-                      <div>
-                        <Label>Dataset URL</Label>
-                        <p className="text-slate-600 text-xs break-all">{proofData.datasetUrl}</p>
-                      </div>
+                      <Label>Accuracy</Label>
+                      <div className="font-mono text-xs bg-green-100 p-2 rounded border">{proofData.accuracy}%</div>
                     </div>
                   </div>
                 ) : (
