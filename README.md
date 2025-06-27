@@ -2,6 +2,9 @@
 
 **Verifiable Benchmarks** is an open-source framework for trustless verification of machine learning inference, inspired by the [TOPLOC](https://arxiv.org/pdf/2501.16007) approach. This project addresses the critical challenge of establishing trust in third-party ML inference providers, ensuring that users can independently verify the integrity and faithfulness of off-chain model execution.
 
+For more information about the project, take a look at the [Vault Hacker House Presentation](https://github.com/benbencik/verifiable-benchmarks/blob/main/Verifiable%20Benchmarks.pdf).
+
+
 ## Quick Start
 
 ### Prerequisites
